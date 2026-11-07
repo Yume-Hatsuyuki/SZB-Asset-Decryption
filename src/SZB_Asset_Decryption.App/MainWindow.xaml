@@ -154,10 +154,12 @@
 
                 <!-- 页面容器：TabControl 只保留内容区，不画页签 -->
                 <TabControl x:Name="Pages" Grid.Row="1" Background="Transparent"
-                            BorderThickness="0" Padding="0" Focusable="False">
+                            BorderThickness="0" Padding="0" Focusable="False"
+                            SelectedIndex="0">
                     <TabControl.Template>
                         <ControlTemplate TargetType="TabControl">
-                            <ContentPresenter ContentSource="SelectedContent"
+                            <ContentPresenter x:Name="PART_SelectedContentHost"
+                                              ContentSource="SelectedContent"
                                               SnapsToDevicePixels="True" />
                         </ControlTemplate>
                     </TabControl.Template>

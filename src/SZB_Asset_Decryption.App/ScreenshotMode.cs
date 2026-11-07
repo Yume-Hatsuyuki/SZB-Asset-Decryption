@@ -48,6 +48,7 @@ internal static class ScreenshotMode
 
         window.Show();
         Pump();
+        AssertInitialPage(window);
 
         if (run)
         {
@@ -86,6 +87,21 @@ internal static class ScreenshotMode
 
         if (task.IsFaulted) throw task.Exception!.GetBaseException();
         Pump();
+    }
+
+    /// <summary>
+    /// Regression guard for the window opening blank: the first page has to be selected and
+    /// materialised on its own, without any manual navigation. Asserting it here means the
+    /// screenshot step fails loudly instead of quietly writing six correct-looking pages.
+    /// </summary>
+    private static void AssertInitialPage(MainWindow window)
+    {
+        if (window.FindName("Pages") is not System.Windows.Controls.TabControl tabs) return;
+
+        if (tabs.SelectedIndex != 0 || tabs.SelectedContent is not FrameworkElement)
+            throw new InvalidOperationException(
+                $"first page did not render: SelectedIndex={tabs.SelectedIndex}, " +
+                $"SelectedContent={tabs.SelectedContent?.GetType().Name ?? "null"}");
     }
 
     /// <summary>Lets layout, bindings and the Loaded handlers settle before rendering.</summary>
