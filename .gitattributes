@@ -1,0 +1,14 @@
+# Normalise everything to LF in the repository; Git converts on checkout for the OS.
+* text=auto eol=lf
+
+# Binary — never touch these
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.zip binary
+*.exe binary
+*.dll binary
+
+# PowerShell is happier with CRLF on legacy hosts, but LF works on 5.1 and 7.x alike.
+*.ps1 text eol=crlf

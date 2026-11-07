@@ -1,0 +1,31 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+
+# Locally downloaded third-party binaries (never commit these)
+tools/bin/*
+!tools/bin/.gitkeep
+src/SzbTool.App/Dependencies/*.exe
+src/SzbTool.App/Dependencies/*.dll
+!src/SzbTool.App/Dependencies/README.md
+
+# Extracted / generated data
+output/
+dist/
+*.log
+*.tmp
+*.part
+extracted/
+work/
+
+# Python teaching material artefacts
+__pycache__/
+*.pyc
+# 06_solve_base_linear.py 需要的中间缓存，由已归档的 15_cache_bundles.py 生成
+lessons/cache_bundles.json
+lessons/*.json
+lessons/*.bin

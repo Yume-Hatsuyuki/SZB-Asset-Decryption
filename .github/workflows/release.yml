@@ -1,0 +1,155 @@
+name: release
+
+# 打 tag 就自动编译 + 打包 + 发 Release。
+# 产物里只有能直接双击运行的东西：SzbTool.exe（界面）、SzbTool.Cli.exe（命令行）、
+# 自带的 .NET 运行时，以及 Dependencies/ 下的 ffmpeg 与 vgmstream。
+# 不含源码、文档、教案——那些在仓库里。
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（不带 v 前缀，例如 1.0.0）。留空则用 0.0.0-dev'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  RID: win-x64
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # ---------------------------------------------------------------- 版本号
+      - name: 解析版本号
+        id: ver
+        shell: pwsh
+        run: |
+          if ('${{ github.ref_type }}' -eq 'tag') {
+              $v = '${{ github.ref_name }}' -replace '^v', ''
+          } elseif ('${{ inputs.version }}') {
+              $v = '${{ inputs.version }}' -replace '^v', ''
+          } else {
+              $v = '0.0.0-dev'
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "zip=SzbTool-$v-$env:RID.zip" >> $env:GITHUB_OUTPUT
+          Write-Host "版本：$v"
+
+      # ---------------------------------------------------------------- 外部解码器
+      # ffmpeg 必须是 GPL 构建（LGPL 版没有 libx264，视频那步会失败）。
+      - name: 下载 ffmpeg 与 vgmstream
+        shell: pwsh
+        run: pwsh -File tools/fetch-deps.ps1
+
+      # ---------------------------------------------------------------- 编译
+      - name: 还原依赖
+        run: dotnet restore src/SzbTool.sln
+
+      - name: 发布界面版
+        shell: pwsh
+        run: |
+          dotnet publish src/SzbTool.App -c Release -r $env:RID --self-contained true `
+            -p:Version=${{ steps.ver.outputs.version }} `
+            -p:InformationalVersion=${{ steps.ver.outputs.version }} `
+            -o dist --nologo
+
+      - name: 发布命令行版
+        shell: pwsh
+        run: |
+          dotnet publish src/SzbTool.Cli -c Release -r $env:RID --self-contained true `
+            -p:Version=${{ steps.ver.outputs.version }} `
+            -p:InformationalVersion=${{ steps.ver.outputs.version }} `
+            -o dist --nologo
+
+      # ---------------------------------------------------------------- 装配
+      # Dependencies 是程序启动时优先搜索的目录（见 ToolLocator）。
+      # 把解码器放进去，发布包就不依赖用户机器上装了什么。
+      - name: 把解码器放进 Dependencies
+        shell: pwsh
+        run: |
+          $dst = 'dist/Dependencies'
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+
+          # 只放 ffmpeg.exe。同包的 ffprobe.exe 又是 158 MB，而程序从不调用它。
+          Copy-Item 'tools/bin/ffmpeg/bin/ffmpeg.exe' $dst -Force
+
+          # vgmstream-cli 依赖同目录的一组 dll，整批复制
+          Get-ChildItem 'tools/bin/vgmstream' -File |
+            Where-Object { $_.Extension -in '.exe', '.dll' } |
+            Copy-Item -Destination $dst -Force
+
+          Copy-Item 'LICENSE' 'THIRD-PARTY-NOTICES.md' 'dist' -Force
+
+          $ff = Get-Item 'dist/Dependencies/ffmpeg.exe'
+          $vg = Get-Item 'dist/Dependencies/vgmstream-cli.exe'
+          Write-Host ("ffmpeg    {0:N1} MB" -f ($ff.Length / 1MB))
+          Write-Host ("vgmstream {0:N1} MB" -f ($vg.Length / 1MB))
+          Write-Host ("dist      共 {0:N1} MB" -f ((Get-ChildItem dist -Recurse -File | Measure-Object Length -Sum).Sum / 1MB))
+
+      # 打 tag 前先确认发布出去的这份是能跑的。
+      # 只看退出码，不匹配输出文字——换行、编码、语言都会让文本比对上当。
+      - name: 冒烟测试
+        shell: pwsh
+        run: |
+          $out = & 'dist/SzbTool.Cli.exe' selftest 2>&1
+          $code = $LASTEXITCODE
+          $out | ForEach-Object { Write-Host $_ }
+          if ($code -ne 0) { throw "selftest exited with $code" }
+          Write-Host 'selftest ok'
+
+      - name: 打包
+        id: pack
+        shell: pwsh
+        run: |
+          $zip = '${{ steps.ver.outputs.zip }}'
+          $dir = "SzbTool-${{ steps.ver.outputs.version }}-$env:RID"
+          Rename-Item dist $dir
+          Compress-Archive -Path $dir -DestinationPath $zip -CompressionLevel Optimal
+          "path=$PWD/$zip" >> $env:GITHUB_OUTPUT
+          Write-Host ("{0}  {1:N1} MB" -f $zip, ((Get-Item $zip).Length / 1MB))
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: SzbTool-${{ steps.ver.outputs.version }}-${{ env.RID }}
+          path: ${{ steps.pack.outputs.path }}
+          retention-days: 14
+
+      # ---------------------------------------------------------------- 发布
+      - name: 发布到 Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.pack.outputs.path }}
+          name: SzbTool ${{ steps.ver.outputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(steps.ver.outputs.version, '-') }}
+          body: |
+            Windows x64，自包含运行时，解压即用。
+
+            | 文件 | 用途 |
+            |---|---|
+            | `SzbTool.exe` | 图形界面 |
+            | `SzbTool.Cli.exe` | 命令行，见 `SzbTool.Cli.exe` 不带参数时的帮助 |
+            | `Dependencies/` | ffmpeg 与 vgmstream，程序启动时优先从这里找 |
+
+            程序不联网。`derive` 会从游戏本地的 `Persistent/dat` 里把 base 密钥算出来，
+            过程见仓库里的 `docs/11_BASE_KEY_SOLVER.md`。
+
+            ffmpeg（GPL 构建）与 vgmstream 的授权见包内 `THIRD-PARTY-NOTICES.md`。

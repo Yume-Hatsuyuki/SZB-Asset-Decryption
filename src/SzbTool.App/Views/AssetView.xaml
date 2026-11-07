@@ -1,0 +1,98 @@
+<UserControl x:Class="SzbTool.App.Views.AssetView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:SzbTool.App.Services"
+             xmlns:ctl="clr-namespace:SzbTool.App.Controls"
+             x:Name="Root">
+    <Grid Margin="26,4,22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="196" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,10,4">
+                <TextBlock Text="资源还原" Style="{StaticResource H1}" />
+                <TextBlock Style="{StaticResource Body}" Margin="0,7,0,0"
+                           Text="把 dat 目录下的每个包去掉加密层，按清单里的真实资源路径写到输出目录。压缩块保持原样，所以产出仍然是合法的 UnityFS 包，可以直接交给 AssetRipper 继续拆。" />
+
+                <Border Style="{StaticResource Card}" Margin="0,18,0,0">
+                    <StackPanel>
+                        <TextBlock Text="还原设置" Style="{StaticResource H2}" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <CheckBox Content="解完逐块校验（更慢，但能第一时间发现错误密钥）"
+                                      Style="{StaticResource Check}"
+                                      IsChecked="{Binding VerifyBlocks, Source={x:Static svc:Workspace.Current}, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <CheckBox Content="清单里查不到 key 的包，原样复制过去而不是跳过"
+                                      Style="{StaticResource Check}"
+                                      IsChecked="{Binding CopyWhenKeyMissing, Source={x:Static svc:Workspace.Current}, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <TextBlock Text="本次只处理前" Style="{StaticResource Body}" VerticalAlignment="Center" />
+                            <TextBox x:Name="LimitBox" Style="{StaticResource Input}" Width="76" Margin="8,0"
+                                     Text="0" TextAlignment="Center" />
+                            <TextBlock Text="个包（0 表示全部）。先用 40 个试跑，确认产物没问题再跑全量。"
+                                       Style="{StaticResource Body}" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <Border Style="{StaticResource Divider}" />
+
+                        <Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="StartBtn" Content="开始还原" Style="{StaticResource PrimaryButton}"
+                                        Click="Start_Click" />
+                                <Button x:Name="CancelBtn" Content="取消" Style="{StaticResource SecondaryButton}"
+                                        Margin="8,0,0,0" Visibility="Collapsed" Click="Cancel_Click" />
+                                <Button Content="打开输出目录" Style="{StaticResource GhostButton}"
+                                        Margin="8,0,0,0" Click="OpenOutput_Click" />
+                            </StackPanel>
+                            <TextBlock x:Name="StateText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       Style="{StaticResource Caption}" Text="就绪" />
+                        </Grid>
+
+                        <ProgressBar x:Name="Bar" Style="{StaticResource Bar}" Margin="0,14,0,0" Value="0" />
+
+                        <TextBlock x:Name="CurrentFile" Style="{StaticResource Caption}" Margin="0,8,0,0"
+                                   TextTrimming="CharacterEllipsis" Text="" />
+
+                        <ItemsControl ItemsSource="{Binding Stats, ElementName=Root}" Margin="0,12,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource BgInput}" CornerRadius="8"
+                                            Padding="13,10" Margin="0,0,8,8" Width="126">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Value}" Style="{StaticResource StatValue}" />
+                                            <TextBlock Text="{Binding Label}" Style="{StaticResource StatLabel}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="失败了怎么查" Style="{StaticResource H2}" />
+                        <TextBlock Style="{StaticResource Body}" Margin="0,8,0,0"
+                                   Text="日志里每条失败都会写明原因。常见的三种：解析失败意味着这个包的 key 不对；布局校验失败意味着数据起点加上块长度对不上文件长度，通常是版本不对；清单缺失意味着这个文件根本没被记录，需要先确认清单是不是最新的。" />
+                        <TextBlock Style="{StaticResource Body}" Margin="0,8,0,0"
+                                   Text="如果几乎全部失败，先回到「概览」跑一次体检，看清结构自洽的数量，再确认「设置」里拉到的密钥是不是当前这个版本的。" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ctl:LogPanel Grid.Row="1" />
+    </Grid>
+</UserControl>

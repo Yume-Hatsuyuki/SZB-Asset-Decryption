@@ -1,0 +1,104 @@
+<UserControl x:Class="SzbTool.App.Views.AudioView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:SzbTool.App.Controls"
+             x:Name="Root">
+    <Grid Margin="26,4,22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="196" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,10,4">
+                <TextBlock Text="音频" Style="{StaticResource H1}" />
+                <TextBlock Style="{StaticResource Body}" Margin="0,7,0,0"
+                           Text="把 Wwise 音频包拆成一个个 .wem，再交给 vgmstream 转成 .wav。这一步没有加密，难点全在容器格式上：包是一串带长度前缀的块，索引表告诉每个音频在哪个位置。" />
+
+                <Border x:Name="DepBar" Style="{StaticResource WarnBar}" Visibility="Collapsed">
+                    <TextBlock x:Name="DepText" Style="{StaticResource Body}" FontSize="11.5" />
+                </Border>
+
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="输出设置" Style="{StaticResource H2}" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <CheckBox x:Name="DecodeCheck" Content="用 vgmstream 转成 wav（推荐）"
+                                      Style="{StaticResource Check}" IsChecked="True"
+                                      Checked="DecodeChanged" Unchecked="DecodeChanged" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <CheckBox x:Name="KeepWemCheck" Content="转换成功后仍保留 .wem 原始文件"
+                                      Style="{StaticResource Check}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <CheckBox x:Name="LoopCheck" Content="循环素材重复两遍再淡出（默认只播一遍）"
+                                      Style="{StaticResource Check}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <TextBlock Text="本次只处理前" Style="{StaticResource Body}" VerticalAlignment="Center" />
+                            <TextBox x:Name="LimitBox" Style="{StaticResource Input}" Width="76" Margin="8,0"
+                                     Text="0" TextAlignment="Center" />
+                            <TextBlock Text="个音频包（0 表示全部）。" Style="{StaticResource Body}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <Border Style="{StaticResource Divider}" />
+
+                        <Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="StartBtn" Content="开始提取" Style="{StaticResource PrimaryButton}"
+                                        Click="Start_Click" />
+                                <Button x:Name="CancelBtn" Content="取消" Style="{StaticResource SecondaryButton}"
+                                        Margin="8,0,0,0" Visibility="Collapsed" Click="Cancel_Click" />
+                                <Button Content="打开输出目录" Style="{StaticResource GhostButton}"
+                                        Margin="8,0,0,0" Click="OpenOutput_Click" />
+                            </StackPanel>
+                            <TextBlock x:Name="StateText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       Style="{StaticResource Caption}" Text="就绪" />
+                        </Grid>
+
+                        <ProgressBar x:Name="Bar" Style="{StaticResource Bar}" Margin="0,14,0,0" Value="0" />
+                        <TextBlock x:Name="CurrentFile" Style="{StaticResource Caption}" Margin="0,8,0,0"
+                                   TextTrimming="CharacterEllipsis" Text="" />
+
+                        <ItemsControl ItemsSource="{Binding Stats, ElementName=Root}" Margin="0,12,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource BgInput}" CornerRadius="8"
+                                            Padding="13,10" Margin="0,0,8,8" Width="126">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Value}" Style="{StaticResource StatValue}" />
+                                            <TextBlock Text="{Binding Label}" Style="{StaticResource StatLabel}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="为什么需要 vgmstream" Style="{StaticResource H2}" />
+                        <TextBlock Style="{StaticResource Body}" Margin="0,8,0,0"
+                                   Text="包里的音频有两种：一种是自定义码本的 Vorbis，一种是 Platinum 的四位 ADPCM。前者是 Wwise 自己的编码，没有公开的解码器实现，自己写等于重造一个音频编解码器。所以这里只负责把 .wem 拆出来，解码交给 vgmstream。" />
+                        <TextBlock Style="{StaticResource Body}" Margin="0,8,0,0"
+                                   Text="如果 vgmstream 缺失，工具仍会输出 .wem 文件，你可以稍后用其他工具处理。" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ctl:LogPanel Grid.Row="1" />
+    </Grid>
+</UserControl>

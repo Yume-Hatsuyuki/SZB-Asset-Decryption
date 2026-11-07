@@ -1,0 +1,35 @@
+name: build
+
+# 每次推送到主干或开 PR 都编译一遍，确认交上来的代码是能过的。
+# 这里不打包、不发布，只看编译器结果。
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  compile:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 还原依赖
+        run: dotnet restore src/SzbTool.sln
+
+      # 警告数量为 0 是这个仓库的基线，别让它悄悄涨上去。
+      - name: 编译
+        run: dotnet build src/SzbTool.sln -c Release --no-restore -warnaserror
+
+      - name: 自检（合成包往返 + LZ4 + 密钥流）
+        run: dotnet run --project src/SzbTool.Cli -c Release --no-build -- selftest
