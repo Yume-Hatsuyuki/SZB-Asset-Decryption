@@ -105,7 +105,7 @@
 
 ### 3.5 为什么音频必须借 vgmstream
 
-Wwise Vorbis 的坑：
+Wwise Vorbis 的问题：
 
 * 码本布局和标准 Vorbis 不同（多一层"modulated delay"）；
 * 每个 wem 可能带 inline setup，也可能依赖 bank 的 setup；
@@ -187,12 +187,12 @@ Expand-Archive ff.zip -DestinationPath tools/bin/ffmpeg
 | `ffmpeg` | n8.1 win64 **GPL** | VP9/MPEG-1 → MP4，ADX 解码 | 3 种编码全部跑通 |
 | .NET SDK | 10.0.403 | 编译 | — |
 
-`ffmpeg` 的 LGPL 版**不能用**（没有 libx264），这一点踩过，记在
+`ffmpeg` 的 LGPL 版**不可用**（没有 libx264），这一点已验证，记在
 `docs/04_PITFALLS.md` 的"附"里。
 
 ---
 
-## 6. 一句话总结
+## 6. 总结
 
 > **结构归我们，算法归别人。**
 

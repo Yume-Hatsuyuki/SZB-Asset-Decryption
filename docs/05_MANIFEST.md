@@ -30,7 +30,7 @@
 **关键点**：TOC 里的 `offset` 是**相对 TOC 结束位置**的，不是相对文件开头。
 TOC 一般 78 字节左右，所以第一张表的真实起点是 `78 + 0`。
 
-这个坑单独记在 `docs/04_PITFALLS.md` 第 8 条。
+该问题单独记在 `docs/04_PITFALLS.md` 第 8 条。
 
 ---
 
@@ -56,7 +56,7 @@ TOC 一般 78 字节左右，所以第一张表的真实起点是 `78 + 0`。
 | `Others` | 20 | 18 张 PNG + 2 个字体 |
 | `Master` | 1 | 配置表 |
 
-这种"数字正好对上"是最强的版本匹配证据。如果 `asset` 表是 36 673 行，
+这种"数字正好对上"是最直接的版本匹配证据。如果 `asset` 表是 36 673 行，
 而磁盘上有 36 673 个 UnityFS 文件，那基本可以确定是同一个版本。
 
 ---
@@ -129,7 +129,7 @@ key_of_file(f) = manifest[basename(f)].key
 * 覆盖率 100%
 
 这个文件在按魔数分类时会被归成"未识别"（它不是 UnityFS，也不是 AKPK/CRID），
-所以很容易漏掉。它的特征：文件开头是 msgpack map，前几个字节大概是 `0x84`。
+所以容易漏掉。它的特征：文件开头是 msgpack map，前几个字节大概是 `0x84`。
 
 **优先级 2：CDN**
 
@@ -161,7 +161,7 @@ https://shadowverse-wb.akamaized.net/dl/manifests/Windows/180106783552/assetbund
 // 1. 用 MessagePack 的 reader 逐对象读，不要用"一次解一个大对象"
 var reader = new MessagePackReader(new ReadOnlyMemory<byte>(raw));
 var toc = ReadToc(ref reader);                 // 第一个对象：map
-long tocEnd = (long)reader.Consumed;           // 注意：Consumed 才是准确的
+long tocEnd = (long)reader.Consumed;           // Consumed 为准确值
 
 // 2. 每张表用绝对切片 + 独立 reader
 foreach (var (name, (offset, length)) in toc)
@@ -206,7 +206,7 @@ var options = MessagePackSerializerOptions.Standard
 Persistent/dat/HQ/HQSQUCLI32QQAPJ5BMWBJCFMTU     41 259 707 字节  ✓ size 匹配
 ```
 
-对这个文件来说，`key` 其实用不上——AKPK 没加密。但 manifest 里照样给它分配了 key，
+`key` 对该文件不使用，因为 AKPK 未加密。但 manifest 里照样给它分配了 key，
 说明 key 是"发给所有资源的"，而不是"只发给加密资源的"。
 
 ---
@@ -222,7 +222,7 @@ Persistent/dat/HQ/HQSQUCLI32QQAPJ5BMWBJCFMTU     41 259 707 字节  ✓ size 匹
 | 反推密钥 | 明文模板池 | +15 499，合计 99.99% |
 | **改用本地 manifest** | 本地 `UX/UXFIK5...` | **100%** |
 
-最后一步让前面所有反推工作都变成了"备用方案"。
+这一步使前面的反推工作降级为备用方案。
 但反推那套方法本身仍然有价值：**如果哪天 manifest 拿不到（比如用了别的方式分发），
 它还能兜底**。
 

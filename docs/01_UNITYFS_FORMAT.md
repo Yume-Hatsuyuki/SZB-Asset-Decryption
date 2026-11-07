@@ -70,7 +70,7 @@
 
 本游戏实测 flags 全是 `0x243` = `0x200 | 0x40 | 0x03`。
 
-> **这一位曾经让我全盘失败。** 最初我把 `0x200` 当成 `0x100`（老 Web 插件），
+> **这一位曾导致全部解析失败。** 最初我把 `0x200` 当成 `0x100`（老 Web 插件），
 > 直接跳过了所有包。正确的读法是：`0x200` 表示"读 blocksInfo 之前要 align 到 16"。
 > 详见 `docs/04_PITFALLS.md` 第 1 条。
 
@@ -131,7 +131,7 @@ var blocksInfo    = Decompress(blocksInfoRaw, uiSize, flags & 0x3F);
             cstring  path 包内路径，如 "CAB-xxxx"
 ```
 
-所以块数量在 `blocksInfo[16..20]`，这是我在诊断时最常用的一个值。
+所以块数量在 `blocksInfo[16..20]`，这是诊断时常用的值。
 
 ---
 
@@ -141,7 +141,7 @@ var blocksInfo    = Decompress(blocksInfoRaw, uiSize, flags & 0x3F);
 data_start = Align16(blocksInfoStart + ciSize)
 ```
 
-这个等式非常有用，因为它是**可以验证**的。本项目的实现里有一条硬性检查：
+这个等式可以验证。本项目的实现里有一条硬性检查：
 
 ```csharp
 data_start + Σ(每块的 compressedSize) == fileSize
@@ -186,7 +186,7 @@ node[0].path     CAB-xxxx
 ```
 
 `data_start = 0x160` 落在 `0x100` 之后。而 blocksInfo 覆盖 `0x30 ~ 0x157`，
-**跨越了 `0x100` 这条加密线**——它有一半是密文。这就是那个坑。
+**跨越了 `0x100` 这条加密边界**，其中一半是密文。
 
 ---
 
@@ -199,7 +199,7 @@ Could not write any bytes for 'cab-...' while decompressing Lz4HC
 ```
 
 它说的 `cab-...` 是 node 的名字，不是文件名。真实文件名是那串 26 个字符的大写 base32
-（比如 `247EJXELQAJPOJSBVGTTGTMIMM`），它其实是 manifest 里的 `hash` 字段。
+（比如 `247EJXELQAJPOJSBVGTTGTMIMM`），它是 manifest 里的 `hash` 字段。
 
 这句报错的意思翻译成人话：**"LZ4 数据块解出来是 0 字节"**。
 LZ4 遇到非法数据不会抛异常，它只会解出 0 字节或者一小段垃圾。AssetRipper 发现结果是空的，

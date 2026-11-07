@@ -4,7 +4,7 @@
 
 ---
 
-## 1. 一句话定义
+## 1. 定义
 
 从文件绝对偏移 `0x100` 开始，每一个字节都和密钥流做一次 XOR：
 
@@ -63,7 +63,7 @@ static byte KeyStreamByte(ReadOnlySpan<byte> baseKey, long key, long absoluteOff
 
 ---
 
-## 4. 这张表值得单独看一眼
+## 4. 密钥流字节的来源
 
 把 88 字节的密钥流摊开，看每个字节受什么影响：
 

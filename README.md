@@ -1,11 +1,11 @@
 # SZB Asset Decryption
 
-Reverse-engineering notes and a working restoration toolkit for the **encrypted Unity AssetBundles**
-shipped with *Shadowverse: Worlds Beyond* (SZB / SVWB).
+Reverse-engineering notes and a restoration tool for the **encrypted Unity AssetBundles** shipped
+with *Shadowverse: Worlds Beyond* (SZB / SVWB).
 
 The game modifies every AssetBundle with a streaming XOR cipher applied **after** the first 256 bytes.
-Stock tools such as AssetRipper or AssetStudio therefore read the bundle header fine, but fail on every
-single data block:
+Stock tools such as AssetRipper or AssetStudio therefore read the bundle header fine, but fail on
+every data block:
 
 ```
 AssetRipper.IO.Files.Exceptions.DecompressionFailedException:
@@ -13,9 +13,9 @@ AssetRipper.IO.Files.Exceptions.DecompressionFailedException:
   while decompressing Lz4HC.
 ```
 
-This repository documents how that cipher works, how the key was recovered **without reading it out of
-memory or the executable**, and provides a C# desktop tool that turns the on-disk files back into
-plain, tool-readable `UnityFS` bundles.
+This repository documents the cipher, the recovery of the key **without reading it from memory or the
+executable**, and provides a C# desktop tool that turns the on-disk files back into plain `UnityFS`
+bundles.
 
 | | |
 |---|---|
@@ -53,7 +53,7 @@ It carries its own .NET runtime and the two decoders, so nothing else needs inst
 * Windows 10/11 and the .NET 10 SDK (the projects target `net10.0` / `net10.0-windows`)
 * The game installed locally (only the `Persistent/dat` folder is needed)
 * `ffmpeg.exe` and `vgmstream-cli.exe` — bundled in the release zip; for a source build, the app can fetch them for you, see [docs/08_TOOLING.md](docs/08_TOOLING.md). `ffprobe.exe` is not used.
-* **No network access at any point.** The base key is computed from the files already on disk.
+* **No network access required.** The base key is computed from files already on disk.
 
 ### Build
 
@@ -81,11 +81,11 @@ The `Audio` and `Video` tabs do the same for the two container formats that are 
 
 ### Where the base key comes from
 
-The key is **data, not code** — and it is not hosted anywhere either. It is *computed* from the local
-install every time the tool needs it. Nothing is downloaded; no key ships in the binary or in the repo.
+The key is data, not code, and is not hosted anywhere. It is computed from the local install each
+time the tool needs it. Nothing is downloaded; no key ships in the binary or the repository.
 
-The tool needs exactly one input that it cannot generate: the manifest the game already stores inside
-`Persistent/dat`, which supplies every bundle's own `int64` key. Everything else comes from arithmetic:
+The tool needs one input it cannot generate: the manifest the game stores inside `Persistent/dat`,
+which supplies each bundle's `int64` key. The rest is arithmetic:
 
 | Step | What happens |
 |---|---|
@@ -98,8 +98,8 @@ The tool needs exactly one input that it cannot generate: the manifest the game 
 About twenty seconds, ~34 000 readable bundles, and a few dozen same-content pairs. `SzbTool.Cli derive
 --dat <dir>` runs exactly this and prints the answer with the counts that produced it.
 
-An empty key is not a soft failure: `Restore` refuses to start rather than write twenty gigabytes of
-half-encrypted bundles.
+If the key is empty, `Restore` refuses to start rather than write twenty gigabytes of half-encrypted
+bundles.
 
 The result is cached at `%LOCALAPPDATA%\SzbTool\base-key.json`, tied to the manifest's size and
 timestamp — a game update invalidates it automatically, and **重新计算** in Settings forces a fresh run.
@@ -108,8 +108,8 @@ timestamp — a game update invalidates it automatically, and **重新计算** i
 
 ## Desktop interface
 
-Six pages, one job each. Everything the CLI can do is reachable by clicking, and the run log is shared
-so a mixed session reads as a single timeline.
+Six pages, one job each. Every CLI operation is available in the interface, and the run log is shared
+across pages.
 
 ![Overview](docs/img/01_overview.png)
 
@@ -127,13 +127,10 @@ is a 12-bundle smoke test: 12/12 in 59 ms, 3.75 MiB.
 **Video** demuxes USM and hands the elementary streams to ffmpeg. Quality tiers are collapsed first — one
 movie usually ships as `High` / `Middle` / `Low`, so 200 files become 1.
 
-Two details worth knowing:
-
-* **Failures are explained, not counted.** Every error line names the file and the reason
-  (`解析失败` = wrong key, `布局校验失败` = version mismatch, `清单缺失` = not in the manifest), because
-  "1 234 files failed" is useless on its own.
-* **Any run can be capped.** The `本次只处理前 N 个` box limits a job to the first N items. It exists so
-  nobody discovers a wrong output folder 20 GiB later.
+* **Errors name the file and the reason.** Every error line carries both
+  (`解析失败` = wrong key, `布局校验失败` = version mismatch, `清单缺失` = not in the manifest).
+* **Runs can be capped.** The `本次只处理前 N 个` box limits a job to the first N items, so a wrong output
+  folder costs N items rather than 20 GiB.
 
 The screenshots above are generated by the app itself (`SzbTool.exe --shot docs/img --run`), which renders
 every page off-screen and, with `--run`, executes a small real job on each task page first. It is used as a
@@ -162,7 +159,7 @@ SzbTool.Cli scan   --dat "D:\...\Persistent\dat"
 
 ## What the game actually changed
 
-Nothing about the container. It is a completely standard **UnityFS v8** bundle:
+The container is unmodified. It is a standard **UnityFS v8** bundle:
 
 ```
 "UnityFS\0" | version | unityVersion | unityRevision | size | ciBlock | uiBlock | flags
@@ -179,36 +176,34 @@ offset 0x100 .. EOF     ciphertext  (blocksInfo tail + every data block)
 The keystream is periodic with period `8 × len(base)`, and within one period byte `i` is
 `base[i >> 3] ^ key[i & 7]`. `key` is a signed 64-bit integer that differs per file.
 
-The base was not taken from the executable or from process memory. It was solved as a system of linear
+The base was not taken from the executable or process memory. It was solved as a system of linear
 equations over GF(2), using pairs of bundles that share the same compression stream but start at a
-different `data_start`. The full derivation — including the two dead ends that had to be cleared first —
-is in [`docs/03_WALKTHROUGH.md`](docs/03_WALKTHROUGH.md).
+different `data_start`. The derivation, including two dead ends, is in
+[`docs/03_WALKTHROUGH.md`](docs/03_WALKTHROUGH.md).
 
 ---
 
 ## Tooling decisions
 
-A deliberate split between “write it” and “shell out to it”.
-
 | Task | Own code | External CLI | Why |
 |---|---|---|---|
-| UnityFS parsing + XOR | ✅ C# | — | Nothing off-the-shelf knows about this cipher |
-| Manifest (msgpack) parsing | ✅ C# | — | ~300 lines, fixed schema, no reason to add a dependency |
-| AKPK (Wwise `pck`) unpack | ✅ C# | — | Chunk chain + a 12-byte-per-entry index table. `wwiser` analyses banks, it does not export |
-| CRI USM demux | ✅ C# | — | Block chain is trivial; the hard part is codec work, which is *not* ours |
-| WEM → WAV | — | ✅ `vgmstream-cli` | Wwise Vorbis uses a private codebook layout. Reimplementing it would be months of work and worse results |
-| MPEG-1 / VP9 / H.264 decode | — | ✅ `ffmpeg` | Never write a video decoder |
+| UnityFS parsing + XOR | ✅ C# | — | No existing tool handles this cipher |
+| Manifest (msgpack) parsing | ✅ C# | — | ~300 lines, fixed schema, no dependency needed |
+| AKPK (Wwise `pck`) unpack | ✅ C# | — | Chunk chain plus a 12-byte-per-entry index. `wwiser` analyses banks; it does not export |
+| CRI USM demux | ✅ C# | — | Simple block chain; codec work is delegated |
+| WEM → WAV | — | ✅ `vgmstream-cli` | Wwise Vorbis uses a private codebook layout; reimplementation cost outweighs the benefit |
+| MPEG-1 / VP9 / H.264 decode | — | ✅ `ffmpeg` | Video decoding is not implemented here |
 | MP4 / MKV muxing | — | ✅ `ffmpeg` | Same |
 | GUI | ✅ WPF | — | Product-specific |
 
-Both external tools are invoked as **separate processes**. They are never linked into this application,
-so the MIT licence of this repository stays clean; see [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+Both external tools run as **separate processes** and are not linked into this application, keeping
+the repository's MIT licence clean; see [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ---
 
 ## Code census
 
-The directory holds 40 702 files. They are four different things wearing the same shape:
+The directory holds 40 702 files in four groups:
 
 | Kind | Count | Size | Handling |
 |---|---|---|---|
@@ -224,15 +219,13 @@ Of the 3 660 sound banks, 14 986 individual waveforms were counted.
 
 ## Credits — what `wbunpacker` contributed
 
-This project would not have started on the right foot without
-[`wbunpacker` (wbu)](https://github.com/Hypnos-PD/wbunpacker). It is a Rust tool by **Hypnos-PD** that
-downloads, decrypts and exports SZB assets, and it is the reason the shape of the problem was known at
-all. Concretely:
+[`wbunpacker` (wbu)](https://github.com/Hypnos-PD/wbunpacker) is a Rust tool by **Hypnos-PD** that
+downloads, decrypts and exports SZB assets. It supplied the structural facts that made this analysis
+possible:
 
-### 1. It described the cipher's *shape*, which made a black-box attack possible
+### 1. It described the structure of the cipher
 
-`crates/asset/src/lib.rs` contains `AssetBundleDecryptor`. Reading that struct tells you three things
-that are otherwise impossible to guess:
+`crates/asset/src/lib.rs` contains `AssetBundleDecryptor`. That struct provides three facts:
 
 ```rust
 const HEADER_SKIP_BYTES: u64 = 0x100;
@@ -241,54 +234,47 @@ const HEADER_SKIP_BYTES: u64 = 0x100;
 keystream[i * 8 + j] = base_keys[i] ^ asset_key_bytes[j];
 ```
 
-* the cipher starts at absolute offset `0x100` (not at `data_start`, not after the header — `0x100`);
+* the cipher starts at absolute offset `0x100`, not at `data_start` and not after the header;
 * the keystream is periodic, with a period that is a multiple of the base key length;
 * each period is `base[i >> 3] ^ key[i & 7]` — i.e. **byte `j` of the per-file key only ever affects
   keystream positions congruent to `j` mod 8**.
 
-That last point is the single most valuable fact in the whole investigation. It is what makes the
-“8 plaintext bytes → 8 key bytes” attack in `docs/03_WALKTHROUGH.md` sound, and it is what told us the
-base key had to be short enough to be searched for with linear algebra rather than brute force.
-
-**Without this model we would have had no target to solve for.** We would have known *that* the data was
-encrypted, and nothing about *how*, which is where most reverse-engineering attempts on this title stop.
+This fact makes the “8 plaintext bytes → 8 key bytes” attack in `docs/03_WALKTHROUGH.md` sound, and it
+established that the base key is short enough to solve with linear algebra rather than brute force.
+Without it, the only known fact would be that the data is encrypted.
 
 ### 2. It confirmed the per-file key is an `int64` that lives in the manifest
 
-`asset_key: i64` in the constructor signature, plus the `asset_bundle_base_keys` config entry, established
-that the key material is **per-asset and data-driven**, so the manifest must contain it. That turned an
-open-ended search into “parse the manifest, join on filename”. `docs/05_MANIFEST.md` follows that thread.
+`asset_key: i64` in the constructor signature, together with the `asset_bundle_base_keys` config entry,
+established that the key material is **per-asset and data-driven**, so the manifest must contain it. The
+search reduces to “parse the manifest, join on filename”; `docs/05_MANIFEST.md` covers it.
 
-### 3. It mapped the surrounding pipeline
+### 3. It documented the surrounding pipeline
 
 * manifest retrieval from the CDN and its MasterMemory + msgpack layout,
 * the fact that AKPK payloads are Wwise banks that `vgmstream` can decode,
 * the `vgmstream` → `ffmpeg` chain for audio,
-* `AssetStudioModCLI` as the downstream extractor (this project uses AssetRipper instead, but the idea
-  of “restore to a plain bundle, then hand off” is the same),
+* `AssetStudioModCLI` as the downstream extractor (this project uses AssetRipper; the approach is the
+  same: restore to a plain bundle, then hand off),
 * the existence of a SQLite3MC-encrypted `meta.db`.
 
-### What this project adds on top
+### What this project adds
 
-`wbunpacker` **consumes** a base key that the user must supply (`asset_bundle_base_keys`, base64).
-It does not document where that value comes from, and the value is not published in the repository.
+`wbunpacker` **consumes** a base key supplied by the user (`asset_bundle_base_keys`, base64). It does not
+document where that value comes from, and the value is not published in the repository.
 
-This project recovers the base key **from the game files alone**, with no memory scraping, no debugger,
-and no access to the executable's constants:
+This project recovers the base key **from the game files alone**, without memory scraping, a debugger,
+or the executable's constants:
 
 ```
 base = <11 bytes>        (solved from the ciphertext; see docs/03_WALKTHROUGH.md)
 ```
 
-The tool does not freeze one build's value into a binary or a config file: it recomputes this from the
-local files every time, because the value changes when the game updates. `docs/02_ENCRYPTION.md` records
-the value this analysis produced, together with the version it belongs to.
+The tool does not freeze one build's value into a binary or config file; it recomputes from the local
+files every time, because the value changes when the game updates. `docs/02_ENCRYPTION.md` records the
+value this analysis produced and the version it belongs to.
 
-That one line is the whole point of `docs/03_WALKTHROUGH.md`. Everything else — the manifest
-parsing, the audio and video work — is engineering; the recovery is the research.
-
-We are grateful to `wbunpacker` for publishing enough of the mechanism to make the question askable.
-Please support the original project.
+Thanks to `wbunpacker` for publishing the mechanism.
 
 ---
 
@@ -307,12 +293,12 @@ interoperability, or preservation. Do not redistribute extracted assets.
 | [`docs/00_GLOSSARY.md`](docs/00_GLOSSARY.md) | Every term used below, in plain language |
 | [`docs/01_UNITYFS_FORMAT.md`](docs/01_UNITYFS_FORMAT.md) | The container format, field by field |
 | [`docs/02_ENCRYPTION.md`](docs/02_ENCRYPTION.md) | The cipher, precisely specified |
-| [`docs/03_WALKTHROUGH.md`](docs/03_WALKTHROUGH.md) | **The investigation, step by step, including failures** |
-| [`docs/04_PITFALLS.md`](docs/04_PITFALLS.md) | 14 traps that cost real time |
+| [`docs/03_WALKTHROUGH.md`](docs/03_WALKTHROUGH.md) | **The investigation, step by step, including dead ends** |
+| [`docs/04_PITFALLS.md`](docs/04_PITFALLS.md) | 14 concrete problems |
 | [`docs/05_MANIFEST.md`](docs/05_MANIFEST.md) | The manifest format and how keys are joined |
 | [`docs/06_AUDIO.md`](docs/06_AUDIO.md) | AKPK / Wwise banks |
 | [`docs/07_VIDEO.md`](docs/07_VIDEO.md) | CRI USM / Sofdec |
 | [`docs/08_TOOLING.md`](docs/08_TOOLING.md) | Why each dependency is either written or borrowed |
-| [`docs/09_VERIFICATION.md`](docs/09_VERIFICATION.md) | How correctness was proven, not assumed |
-| [`docs/10_UI.md`](docs/10_UI.md) | The desktop interface, and seven pitfalls hit while building it |
-| [`docs/11_BASE_KEY_SOLVER.md`](docs/11_BASE_KEY_SOLVER.md) | The solver as implemented, and four pitfalls hit while porting it |
+| [`docs/09_VERIFICATION.md`](docs/09_VERIFICATION.md) | How correctness was verified |
+| [`docs/10_UI.md`](docs/10_UI.md) | The desktop interface, and seven implementation problems |
+| [`docs/11_BASE_KEY_SOLVER.md`](docs/11_BASE_KEY_SOLVER.md) | The solver as implemented, and four porting problems |

@@ -41,7 +41,7 @@ while pos < filesize:
 | `STID` / `STMG` / `ENVS` 等 | 其它 Wwise 段，遇到就跳过 |
 
 **注意 `RIFF` 这一行。** 它看起来像 chunk，实际上是嵌套的完整 WAV 文件。
-巧的是 RIFF 的头部格式和 chunk 头部格式**恰好兼容**：
+RIFF 头部格式与 chunk 头部格式**兼容**：
 
 ```
 RIFF 文件：  "RIFF" | u32 后续长度 | "WAVE" | ...
@@ -236,5 +236,5 @@ for (int i = 0; i < didxSize / 12; i++)
 manifest 里给 `Sound` 类资源也分配了 `key` 字段，但**用不上**。
 AKPK 从头到尾没有加密。
 
-这一点值得强调，因为它的重要含义是：**"有 key 字段"不等于"被加密了"**。
+这一点需要明确：**"有 key 字段"不等于"被加密了"**。
 key 是发给所有资源的元数据，只有 UnityFS 包才真的用它。
