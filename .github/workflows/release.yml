@@ -93,7 +93,7 @@ jobs:
             Where-Object { $_.Extension -in '.exe', '.dll' } |
             Copy-Item -Destination $dst -Force
 
-          Copy-Item 'LICENSE' 'THIRD-PARTY-NOTICES.md' 'dist' -Force
+          Copy-Item -Path 'LICENSE','THIRD-PARTY-NOTICES.md' -Destination 'dist' -Force
 
           $ff = Get-Item 'dist/Dependencies/ffmpeg.exe'
           $vg = Get-Item 'dist/Dependencies/vgmstream-cli.exe'
