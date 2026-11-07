@@ -124,7 +124,8 @@ dotnet run --project src/SZB_Asset_Decryption.App -c Release
 3. **输出目录** → 选个空文件夹
 4. 点 **开始还原**（密钥会自动算，见下一节）
 
-出来的是一棵按真实资源路径命名的 `.ab` 目录树，直接拖进 AssetRipper 就行。
+出来的是一棵按真实资源路径命名的 `.ab` 目录树，直接拖进 AssetRipper 就行。第一次用先设好
+AssetRipper 的 Default Version，包头的版本号是被抹过的，见 [`docs/12_DOWNSTREAM.md`](docs/12_DOWNSTREAM.md)。
 `音频` / `视频` 两个页签做同样的事，处理那两类非 Unity 容器。
 
 ### 基础密钥从哪来
@@ -261,3 +262,4 @@ base = <11 字节>        （从密文解出来的，推导见 docs/03_WALKTHROU
 | [`docs/09_VERIFICATION.md`](docs/09_VERIFICATION.md) | 结果的验证方法与证据 |
 | [`docs/10_UI.md`](docs/10_UI.md) | 界面结构，以及七个实现问题 |
 | [`docs/11_BASE_KEY_SOLVER.md`](docs/11_BASE_KEY_SOLVER.md) | 求解器的实现，以及四个移植问题 |
+| [`docs/12_DOWNSTREAM.md`](docs/12_DOWNSTREAM.md) | 交给 AssetRipper：导出为空、分批导入、输出目录结构 |

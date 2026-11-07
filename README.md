@@ -75,7 +75,8 @@ Then:
 3. **Output** → pick an empty folder
 4. **Key** → fetched automatically on start-up, see below
 5. Press **Restore**. The tool writes a mirror tree of plain `.ab` files named after the real asset path,
-   ready to be dropped into AssetRipper.
+   ready to be dropped into AssetRipper. Set AssetRipper's Default Version first — the bundles carry a
+   stripped version string, see [docs/12_DOWNSTREAM.md](docs/12_DOWNSTREAM.md).
 
 The `Audio` and `Video` tabs do the same for the two container formats that are *not* Unity bundles.
 
@@ -302,3 +303,4 @@ interoperability, or preservation. Do not redistribute extracted assets.
 | [`docs/09_VERIFICATION.md`](docs/09_VERIFICATION.md) | How correctness was verified |
 | [`docs/10_UI.md`](docs/10_UI.md) | The desktop interface, and seven implementation problems |
 | [`docs/11_BASE_KEY_SOLVER.md`](docs/11_BASE_KEY_SOLVER.md) | The solver as implemented, and four porting problems |
+| [`docs/12_DOWNSTREAM.md`](docs/12_DOWNSTREAM.md) | Handing the output to AssetRipper: empty exports, batch size, output layout |
