@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>SzbAssetDecryption.Core</RootNamespace>
+    <AssemblyName>SZB_Asset_Decryption.Core</AssemblyName>
+    <Description>Format parsers and restoration engine for Shadowverse: Worlds Beyond asset files.</Description>
+  </PropertyGroup>
+
+</Project>

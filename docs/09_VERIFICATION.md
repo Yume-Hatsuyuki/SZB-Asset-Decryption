@@ -222,10 +222,10 @@ L3 检查覆盖这一剩余风险。
 
 ```powershell
 # 1. 还原
-SzbTool.Cli restore --dat "D:\...\Persistent\dat" --out "D:\restored"
+SZB_Asset_Decryption.Cli restore --dat "D:\...\Persistent\dat" --out "D:\restored"
 
 # 2. 逐块校验（会打印失败数）
-SzbTool.Cli verify --dat "D:\...\Persistent\dat" --sample 400
+SZB_Asset_Decryption.Cli verify --dat "D:\...\Persistent\dat" --sample 400
 
 # 3. 第三方交叉验证
 pip install UnityPy

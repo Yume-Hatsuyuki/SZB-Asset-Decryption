@@ -1,0 +1,104 @@
+<UserControl x:Class="SzbAssetDecryption.App.Views.VideoView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:SzbAssetDecryption.App.Controls"
+             x:Name="Root">
+    <Grid Margin="26,4,22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="196" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,10,4">
+                <TextBlock Text="视频" Style="{StaticResource H1}" />
+                <TextBlock Style="{StaticResource Body}" Margin="0,7,0,0"
+                           Text="把 CRI USM 动画拆成视频轨和音频轨，再交给 ffmpeg 封成可播放的文件。USM 本身没有加密，麻烦在于它把每一帧按块切开，块里还带对齐填充，得先把填充去掉才能拼成连续码流。" />
+
+                <Border x:Name="DepBar" Style="{StaticResource WarnBar}" Visibility="Collapsed">
+                    <TextBlock x:Name="DepText" Style="{StaticResource Body}" FontSize="11.5" />
+                </Border>
+
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="输出格式" Style="{StaticResource H2}" />
+                        <TextBlock Style="{StaticResource Body}" Margin="0,5,0,10"
+                                   Text="默认重新编码成 H.264，兼容性最好。直接封装不重新编码，速度快、画质无损，但播放器必须支持原始的 VP9 或 MPEG-1 轨道。" />
+
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="CbH264" Content="MP4 · H.264" Style="{StaticResource Segment}"
+                                         GroupName="Container" IsChecked="True" />
+                            <RadioButton x:Name="CbCopy" Content="MP4 · 直接封装" Style="{StaticResource Segment}"
+                                         GroupName="Container" />
+                            <RadioButton x:Name="CbMkv" Content="MKV · 直接封装" Style="{StaticResource Segment}"
+                                         GroupName="Container" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                            <CheckBox x:Name="DedupCheck" Content="同一段动画有多个画质档时，只保留最高的一档"
+                                      Style="{StaticResource Check}" IsChecked="True" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <TextBlock Text="本次只处理前" Style="{StaticResource Body}" VerticalAlignment="Center" />
+                            <TextBox x:Name="LimitBox" Style="{StaticResource Input}" Width="76" Margin="8,0"
+                                     Text="0" TextAlignment="Center" />
+                            <TextBlock Text="个动画（0 表示全部）。" Style="{StaticResource Body}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <Border Style="{StaticResource Divider}" />
+
+                        <Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="StartBtn" Content="开始转换" Style="{StaticResource PrimaryButton}"
+                                        Click="Start_Click" />
+                                <Button x:Name="CancelBtn" Content="取消" Style="{StaticResource SecondaryButton}"
+                                        Margin="8,0,0,0" Visibility="Collapsed" Click="Cancel_Click" />
+                                <Button Content="打开输出目录" Style="{StaticResource GhostButton}"
+                                        Margin="8,0,0,0" Click="OpenOutput_Click" />
+                            </StackPanel>
+                            <TextBlock x:Name="StateText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       Style="{StaticResource Caption}" Text="就绪" />
+                        </Grid>
+
+                        <ProgressBar x:Name="Bar" Style="{StaticResource Bar}" Margin="0,14,0,0" Value="0" />
+                        <TextBlock x:Name="CurrentFile" Style="{StaticResource Caption}" Margin="0,8,0,0"
+                                   TextTrimming="CharacterEllipsis" Text="" />
+
+                        <ItemsControl ItemsSource="{Binding Stats, ElementName=Root}" Margin="0,12,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource BgInput}" CornerRadius="8"
+                                            Padding="13,10" Margin="0,0,8,8" Width="126">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Value}" Style="{StaticResource StatValue}" />
+                                            <TextBlock Text="{Binding Label}" Style="{StaticResource StatLabel}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="包里到底是什么" Style="{StaticResource H2}" />
+                        <TextBlock Style="{StaticResource Body}" Margin="0,8,0,0"
+                                   Text="这批素材的动画有两种编码：较新的用 VP9，容器是 IVF；较旧的用 MPEG-1，是裸码流。工具会读第一帧判断是哪一种，然后走不同的拼装方式。音频多数是 ADX，也会一并接进输出文件。" />
+                        <TextBlock Style="{StaticResource Body}" Margin="0,8,0,0"
+                                   Text="如果转换失败，日志里会写明是「解析失败」「未提取到视频帧」还是 ffmpeg 报错。前者说明容器结构没对上，后者通常是编码参数问题。" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ctl:LogPanel Grid.Row="1" />
+    </Grid>
+</UserControl>

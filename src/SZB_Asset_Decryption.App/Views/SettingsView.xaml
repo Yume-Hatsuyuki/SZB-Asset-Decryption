@@ -1,0 +1,158 @@
+<UserControl x:Class="SzbAssetDecryption.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:SzbAssetDecryption.App.Services"
+             x:Name="Root">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="26,4,32,24">
+            <TextBlock Text="设置" Style="{StaticResource H1}" />
+            <TextBlock Style="{StaticResource Body}" Margin="0,7,0,0"
+                       Text="这里的开关会被记住，下次打开自动生效。" />
+
+            <!-- ============ 性能 ============ -->
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0">
+                <StackPanel>
+                    <TextBlock Text="性能" Style="{StaticResource H2}" />
+                    <TextBlock Style="{StaticResource Body}" Margin="0,5,0,14"
+                               Text="还原过程几乎全是磁盘读写，并发数略高于 CPU 核心数通常最快。设得太高反而会因为硬盘排队而变慢。" />
+
+                    <TextBlock Text="并发任务数" Style="{StaticResource FieldLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="ParallelBox" Style="{StaticResource Input}" Width="90"
+                                 TextAlignment="Center" />
+                        <TextBlock x:Name="CpuHint" Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                   Margin="12,0,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ 基础密钥 ============ -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="基础密钥" Style="{StaticResource H2}" />
+                    <TextBlock Style="{StaticResource Body}" Margin="0,5,0,14" TextWrapping="Wrap"
+                               Text="不从任何地方下载，也不写在程序里。程序读游戏自带的清单拿到每个包的 key，再在本地文件里找出「内容相同、数据起点不同」的包对，列 GF(2) 方程组解出这 11 个字节，最后用 LZ4 校验从 256 个候选里挑出唯一解。全程只读本地文件，约 20 秒。" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="当前密钥" Style="{StaticResource FieldLabel}" />
+                            <TextBlock x:Name="KeyValue" Style="{StaticResource Body}"
+                                       FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="KeyDetail" Style="{StaticResource Caption}" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <Button Grid.Column="1" x:Name="DeriveButton" Content="计算"
+                                Margin="12,0,0,0" VerticalAlignment="Center"
+                                Style="{StaticResource SecondaryButton}" Click="Derive_Click" />
+                        <Button Grid.Column="2" Content="重新计算" Margin="8,0,0,0"
+                                VerticalAlignment="Center" ToolTip="忽略缓存，重新扫描本地文件"
+                                Style="{StaticResource GhostButton}" Click="Rederive_Click" />
+                    </Grid>
+
+                    <TextBlock x:Name="KeyState" Style="{StaticResource Caption}" Margin="0,10,0,0"
+                               TextWrapping="Wrap" />
+
+                    <Border Style="{StaticResource Divider}" Margin="0,16,0,0" />
+
+                    <TextBlock Text="手动指定（一般不需要）" Style="{StaticResource FieldLabel}"
+                               Margin="0,14,0,0" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="KeyBox" Style="{StaticResource Input}"
+                                 FontFamily="{StaticResource MonoFont}" FontSize="12" />
+                        <Button Grid.Column="1" Content="应用" Margin="8,0,0,0"
+                                Style="{StaticResource SecondaryButton}" Click="ApplyKey_Click" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource Caption}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="支持 hex（22 个字符）或 base64。只有在你已经知道正确值、又不想等推导时才需要填。" />
+                </StackPanel>
+            </Border>
+
+            <!-- ============ 外部依赖 ============ -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock Text="外部依赖" Style="{StaticResource H2}" />
+                            <TextBlock Style="{StaticResource Body}" Margin="0,5,0,0" MaxWidth="620"
+                                       HorizontalAlignment="Left"
+                                       Text="程序自己只负责解析容器和去掉加密层。音频解码和视频封装交给成熟工具，这样既不用重写编解码器，也不会因为自己写得不对而产出坏文件。" />
+                        </StackPanel>
+                        <Button Content="重新探测" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Style="{StaticResource SecondaryButton}" Click="Reprobe_Click" />
+                    </Grid>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="ffmpeg" Style="{StaticResource Body}" FontSize="12" />
+                        <Ellipse x:Name="FfmpegDot" Grid.Column="1" Width="7" Height="7" Margin="0,0,8,0"
+                                 VerticalAlignment="Center" />
+                        <TextBlock x:Name="FfmpegPath" Grid.Column="2" Style="{StaticResource Caption}"
+                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="vgmstream" Style="{StaticResource Body}" FontSize="12" />
+                        <Ellipse x:Name="VgmDot" Grid.Column="1" Width="7" Height="7" Margin="0,0,8,0"
+                                 VerticalAlignment="Center" />
+                        <TextBlock x:Name="VgmPath" Grid.Column="2" Style="{StaticResource Caption}"
+                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource Body}" Margin="0,16,0,0"
+                               Text="放置位置：程序目录下的 Dependencies 文件夹。仓库里的 tools/fetch-deps.ps1 可以自动下载。" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="打开程序目录" Style="{StaticResource GhostButton}" Click="OpenAppDir_Click" />
+                        <Button Content="打开数据目录" Style="{StaticResource GhostButton}" Margin="6,0,0,0"
+                                Click="OpenDatDir_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ 高级 ============ -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="高级" Style="{StaticResource H2}" />
+                    <TextBlock Style="{StaticResource Body}" Margin="0,5,0,14"
+                               Text="下面的选项只在排查问题时有用，日常使用保持默认即可。" />
+
+                    <CheckBox Content="还原时逐块解压校验（发现错误密钥立刻停下，速度大约慢一半）"
+                              Style="{StaticResource Check}"
+                              IsChecked="{Binding VerifyBlocks, Source={x:Static svc:Workspace.Current}, Mode=TwoWay}" />
+                    <CheckBox Content="清单里没有 key 的包，原样复制而不是跳过" Margin="0,10,0,0"
+                              Style="{StaticResource Check}"
+                              IsChecked="{Binding CopyWhenKeyMissing, Source={x:Static svc:Workspace.Current}, Mode=TwoWay}" />
+
+                    <TextBlock Style="{StaticResource Body}" Margin="0,16,0,0"
+                               Text="设置文件位置：%LOCALAPPDATA%\SZB_Asset_Decryption\settings.json" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Content="保存设置" Style="{StaticResource PrimaryButton}" Click="Save_Click" />
+                        <Button Content="清空运行日志" Style="{StaticResource GhostButton}" Margin="8,0,0,0"
+                                Click="ClearLog_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

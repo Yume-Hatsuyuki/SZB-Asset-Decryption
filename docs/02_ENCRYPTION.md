@@ -205,7 +205,7 @@ public static ReadOnlySpan<byte> DefaultBaseKey => [0x53, 0x2B, 0x46, 0x31, ...]
 提供的输入**。这个值是上一节那套方程解出来的，游戏文件里所有解题材料都在，没有任何理由让它
 依赖第三方。
 
-所以现在的做法是：**每次需要时从本地文件重算**。`SzbTool.Core.Keys` 下的三个文件干这件事，
+所以现在的做法是：**每次需要时从本地文件重算**。`SZB_Asset_Decryption.Core.Keys` 下的三个文件干这件事，
 流程在 [`docs/11_BASE_KEY_SOLVER.md`](11_BASE_KEY_SOLVER.md)。
 
 `XorKeystream` 里没有任何密钥常量，`RestoreOptions.BaseKey` 默认是空数组，空数组时

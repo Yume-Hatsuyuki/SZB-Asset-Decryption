@@ -540,7 +540,7 @@ key[t] = cipher[0x100 + t] ^ plain[0x100 + t] ^ base[10]
 
 ## 第 9 步 · 全量还原
 
-**做法**：`SzbTool.Cli restore`（早期是 `lessons/` 里的 Python 脚本）。
+**做法**：`SZB_Asset_Decryption.Cli restore`（早期是 `lessons/` 里的 Python 脚本）。
 
 **结果**（第一轮）：34 374 个包，0 失败，8.52 GiB。
 

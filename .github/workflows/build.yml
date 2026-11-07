@@ -25,11 +25,11 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: 还原依赖
-        run: dotnet restore src/SzbTool.sln
+        run: dotnet restore src/SZB_Asset_Decryption.sln
 
       # 警告数量为 0 是这个仓库的基线，别让它悄悄涨上去。
       - name: 编译
-        run: dotnet build src/SzbTool.sln -c Release --no-restore -warnaserror
+        run: dotnet build src/SZB_Asset_Decryption.sln -c Release --no-restore -warnaserror
 
       - name: 自检（合成包往返 + LZ4 + 密钥流）
-        run: dotnet run --project src/SzbTool.Cli -c Release --no-build -- selftest
+        run: dotnet run --project src/SZB_Asset_Decryption.Cli -c Release --no-build -- selftest

@@ -1,7 +1,7 @@
 name: release
 
 # 打 tag 就自动编译 + 打包 + 发 Release。
-# 产物里只有能直接双击运行的东西：SzbTool.exe（界面）、SzbTool.Cli.exe（命令行）、
+# 产物里只有能直接双击运行的东西：SZB_Asset_Decryption.exe（界面）、SZB_Asset_Decryption.Cli.exe（命令行）、
 # 自带的 .NET 运行时，以及 Dependencies/ 下的 ffmpeg 与 vgmstream。
 # 不含源码、文档、教案——那些在仓库里。
 
@@ -47,7 +47,7 @@ jobs:
               $v = '0.0.0-dev'
           }
           "version=$v" >> $env:GITHUB_OUTPUT
-          "zip=SzbTool-$v-$env:RID.zip" >> $env:GITHUB_OUTPUT
+          "zip=SZB_Asset_Decryption-$v-$env:RID.zip" >> $env:GITHUB_OUTPUT
           Write-Host "版本：$v"
 
       # ---------------------------------------------------------------- 外部解码器
@@ -58,12 +58,12 @@ jobs:
 
       # ---------------------------------------------------------------- 编译
       - name: 还原依赖
-        run: dotnet restore src/SzbTool.sln
+        run: dotnet restore src/SZB_Asset_Decryption.sln
 
       - name: 发布界面版
         shell: pwsh
         run: |
-          dotnet publish src/SzbTool.App -c Release -r $env:RID --self-contained true `
+          dotnet publish src/SZB_Asset_Decryption.App -c Release -r $env:RID --self-contained true `
             -p:Version=${{ steps.ver.outputs.version }} `
             -p:InformationalVersion=${{ steps.ver.outputs.version }} `
             -o dist --nologo
@@ -71,7 +71,7 @@ jobs:
       - name: 发布命令行版
         shell: pwsh
         run: |
-          dotnet publish src/SzbTool.Cli -c Release -r $env:RID --self-contained true `
+          dotnet publish src/SZB_Asset_Decryption.Cli -c Release -r $env:RID --self-contained true `
             -p:Version=${{ steps.ver.outputs.version }} `
             -p:InformationalVersion=${{ steps.ver.outputs.version }} `
             -o dist --nologo
@@ -106,7 +106,7 @@ jobs:
       - name: 冒烟测试
         shell: pwsh
         run: |
-          $out = & 'dist/SzbTool.Cli.exe' selftest 2>&1
+          $out = & 'dist/SZB_Asset_Decryption.Cli.exe' selftest 2>&1
           $code = $LASTEXITCODE
           $out | ForEach-Object { Write-Host $_ }
           if ($code -ne 0) { throw "selftest exited with $code" }
@@ -117,7 +117,7 @@ jobs:
         shell: pwsh
         run: |
           $zip = '${{ steps.ver.outputs.zip }}'
-          $dir = "SzbTool-${{ steps.ver.outputs.version }}-$env:RID"
+          $dir = "SZB_Asset_Decryption-${{ steps.ver.outputs.version }}-$env:RID"
           Rename-Item dist $dir
           Compress-Archive -Path $dir -DestinationPath $zip -CompressionLevel Optimal
           "path=$PWD/$zip" >> $env:GITHUB_OUTPUT
@@ -126,7 +126,7 @@ jobs:
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
-          name: SzbTool-${{ steps.ver.outputs.version }}-${{ env.RID }}
+          name: SZB_Asset_Decryption-${{ steps.ver.outputs.version }}-${{ env.RID }}
           path: ${{ steps.pack.outputs.path }}
           retention-days: 14
 
@@ -136,7 +136,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.pack.outputs.path }}
-          name: SzbTool ${{ steps.ver.outputs.version }}
+          name: SZB_Asset_Decryption ${{ steps.ver.outputs.version }}
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(steps.ver.outputs.version, '-') }}
@@ -145,8 +145,8 @@ jobs:
 
             | 文件 | 用途 |
             |---|---|
-            | `SzbTool.exe` | 图形界面 |
-            | `SzbTool.Cli.exe` | 命令行，见 `SzbTool.Cli.exe` 不带参数时的帮助 |
+            | `SZB_Asset_Decryption.exe` | 图形界面 |
+            | `SZB_Asset_Decryption.Cli.exe` | 命令行，见 `SZB_Asset_Decryption.Cli.exe` 不带参数时的帮助 |
             | `Dependencies/` | ffmpeg 与 vgmstream，程序启动时优先从这里找 |
 
             程序不联网。`derive` 会从游戏本地的 `Persistent/dat` 里把 base 密钥算出来，

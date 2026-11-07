@@ -2,7 +2,7 @@
 
 `docs/03` 第 7 步讲推导过程。这一篇讲程序中的实现，以及把 Python 实验代码改写成 C# 时遇到的问题。
 
-代码在 `src/SzbTool.Core/Keys/`：
+代码在 `src/SZB_Asset_Decryption.Core/Keys/`：
 
 | 文件 | 职责 |
 |---|---|
@@ -205,7 +205,7 @@ x[hb] = rhs ^ parity(coeff & solution)
 
 ## 7. 缓存
 
-`%LOCALAPPDATA%\SzbTool\base-key.json`：
+`%LOCALAPPDATA%\SZB_Asset_Decryption\base-key.json`：
 
 ```json
 {

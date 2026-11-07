@@ -2,7 +2,7 @@
 
 本章只讲结构，不讲加密。先把"正常情况长什么样"钉死，后面才能一眼看出哪里被动了手脚。
 
-所有内容都用实际数据核对过，`src/SzbTool.Core/UnityFsBundle.cs` 是可以运行的实现。
+所有内容都用实际数据核对过，`src/SZB_Asset_Decryption.Core/UnityFsBundle.cs` 是可以运行的实现。
 
 ---
 

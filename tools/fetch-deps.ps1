@@ -1,7 +1,7 @@
 #requires -version 5.1
 <#
 .SYNOPSIS
-    Downloads the two external tools SzbTool calls, and lays them out under tools/bin.
+    Downloads the two external decoders (ffmpeg, vgmstream) and lays them out under tools/bin.
 
 .DESCRIPTION
     ffmpeg  -> tools/bin/ffmpeg/bin/ffmpeg.exe
@@ -20,7 +20,7 @@
     Only fetch ffmpeg.
 
 .PARAMETER ToApp
-    Also copy the executables into src/SzbTool.App/Dependencies so a published build
+    Also copy the executables into src/SZB_Asset_Decryption.App/Dependencies so a published build
     is self-contained.
 
 .EXAMPLE
@@ -42,7 +42,7 @@ Set-StrictMode -Version Latest
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $binRoot = Join-Path $repoRoot 'tools/bin'
-$tmpRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("szbtool-deps-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
+$tmpRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("szb-asset-decryption-deps-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
 
 function Write-Step($text) { Write-Host "==> $text" -ForegroundColor Cyan }
 function Write-Ok($text) { Write-Host "    $text" -ForegroundColor Green }
@@ -114,8 +114,8 @@ try {
 
     # ------------------------------------------------------------------ optional copy
     if ($ToApp) {
-        Write-Step 'copying into src/SzbTool.App/Dependencies'
-        $appDeps = Join-Path $repoRoot 'src/SzbTool.App/Dependencies'
+        Write-Step 'copying into src/SZB_Asset_Decryption.App/Dependencies'
+        $appDeps = Join-Path $repoRoot 'src/SZB_Asset_Decryption.App/Dependencies'
         New-Item -ItemType Directory -Force -Path $appDeps | Out-Null
 
         $ff = Join-Path $binRoot 'ffmpeg/bin/ffmpeg.exe'

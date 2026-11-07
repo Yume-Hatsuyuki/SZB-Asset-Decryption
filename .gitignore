@@ -9,9 +9,9 @@
 # Locally downloaded third-party binaries (never commit these)
 tools/bin/*
 !tools/bin/.gitkeep
-src/SzbTool.App/Dependencies/*.exe
-src/SzbTool.App/Dependencies/*.dll
-!src/SzbTool.App/Dependencies/README.md
+src/SZB_Asset_Decryption.App/Dependencies/*.exe
+src/SZB_Asset_Decryption.App/Dependencies/*.dll
+!src/SZB_Asset_Decryption.App/Dependencies/README.md
 
 # Extracted / generated data
 output/

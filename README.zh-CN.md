@@ -108,13 +108,13 @@ AssetRipper.IO.Files.Exceptions.DecompressionFailedException:
 ### 编译
 
 ```powershell
-dotnet build src/SzbTool.sln -c Release
+dotnet build src/SZB_Asset_Decryption.sln -c Release
 ```
 
 ### 运行
 
 ```powershell
-dotnet run --project src/SzbTool.App -c Release
+dotnet run --project src/SZB_Asset_Decryption.App -c Release
 ```
 
 界面里四步：
@@ -142,12 +142,12 @@ dotnet run --project src/SzbTool.App -c Release
 | 4 | 长度从 2 试到 64，做高斯消元。长度猜错会解出 `0 = 1`。只有 11（以及它的倍数）自洽 |
 | 5 | 秩 80 / 88 个未知数，所以还剩 256 个候选。逐个丢给 LZ4：只有真解能解出块表声明的那一长度 |
 
-大约 20 秒，需要三万多份可读的包和几十对同内容包。`SzbTool.Cli derive --dat <目录>` 跑的就是这一套，
+大约 20 秒，需要三万多份可读的包和几十对同内容包。`SZB_Asset_Decryption.Cli derive --dat <目录>` 跑的就是这一套，
 会把结果和"用了多少包、多少对"一起打印出来。
 
 密钥为空时 `开始还原` 拒绝运行，不会写出二十 GB 的半加密包。
 
-算出来的结果缓存在 `%LOCALAPPDATA%\SzbTool\base-key.json`，跟着清单的大小和修改时间走——
+算出来的结果缓存在 `%LOCALAPPDATA%\SZB_Asset_Decryption\base-key.json`，跟着清单的大小和修改时间走——
 游戏一更新自动失效，设置页的 **重新计算** 可以强制重跑。
 
 ---
@@ -175,16 +175,16 @@ dotnet run --project src/SzbTool.App -c Release
   `布局校验失败` = 版本不对，`清单缺失` = 清单中没有该文件）。
 * **任务可限流。** `本次只处理前 N 个` 把任务限制在前 N 个，避免写满 20 GiB 后才发现输出目录选错。
 
-上面的截图是程序自己生成的（`SzbTool.exe --shot docs/img --run`）：离屏把每一页渲染成 PNG，
+上面的截图是程序自己生成的（`SZB_Asset_Decryption.exe --shot docs/img --run`）：离屏把每一页渲染成 PNG，
 带 `--run` 时会先在三个任务页上各跑一个小任务。它同时是冒烟测试：任一页面的视觉树构建失败，命令直接抛错。整轮出图不联网，包括设置页里显示的那次密钥推导。
 
 ### 命令行
 
 ```powershell
-SzbTool.Cli restore --dat "D:\...\Persistent\dat" --out "D:\restored"
-SzbTool.Cli audio   --dat "D:\...\Persistent\dat" --out "D:\audio" --format wav
-SzbTool.Cli video   --dat "D:\...\Persistent\dat" --out "D:\video" --format mp4
-SzbTool.Cli scan    --dat "D:\...\Persistent\dat"
+SZB_Asset_Decryption.Cli restore --dat "D:\...\Persistent\dat" --out "D:\restored"
+SZB_Asset_Decryption.Cli audio   --dat "D:\...\Persistent\dat" --out "D:\audio" --format wav
+SZB_Asset_Decryption.Cli video   --dat "D:\...\Persistent\dat" --out "D:\video" --format mp4
+SZB_Asset_Decryption.Cli scan    --dat "D:\...\Persistent\dat"
 ```
 
 ---

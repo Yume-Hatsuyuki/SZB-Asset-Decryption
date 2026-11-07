@@ -181,7 +181,7 @@ var options = MessagePackSerializerOptions.Standard
 
 如果不想引 `MessagePack` 包，自己写一个最小的 msgpack 读取器也就 200 行左右
 （只需要支持 `map`、`array`、`str`、`int`、`nil`、`ext`），本项目的
-`src/SzbTool.Core/MsgPack/` 就是这样做的——这样整个工具链零第三方依赖。
+`src/SZB_Asset_Decryption.Core/MsgPack/` 就是这样做的——这样整个工具链零第三方依赖。
 
 **为什么不引 MessagePack 包**：manifest 里混着 `Ext99` 类型，引库之后还要处理 resolver 链，
 配置比手写还长。手写一个只支持必要类型的读取器更可控。
