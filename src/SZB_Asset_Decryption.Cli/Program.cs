@@ -261,7 +261,8 @@ internal static class Program
             Console.Write($"\r  {p.PackagesDone}/{p.PackagesTotal} 包  {p.WemsExtracted} wem  {p.WavConverted} wav   ")), pkgs);
 
         Console.WriteLine();
-        Console.WriteLine($"包 {result.Packages}  波形 {result.Wems}  转 wav {result.Wavs}  失败 {result.Failures}");
+        Console.WriteLine($"包 {result.Packages}  波形 {result.Wems}  音效名 {result.Named}  " +
+                          $"转 wav {result.Wavs}  失败 {result.Failures}");
         Console.WriteLine($"耗时 {result.Elapsed.TotalSeconds:F1}s");
 
         foreach (var (f, e) in result.Errors.Take(10)) Console.WriteLine($"  {f}: {e}");

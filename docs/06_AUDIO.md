@@ -82,6 +82,11 @@ blob  = file[start, start + size)
 没有 `DIDX`/`DATA`，而是把每个 wem 作为独立文件顺序拼接在后面。
 按上面的通用循环走，每次遇到 `RIFF` 就导出一个。
 
+形态 B 的波形 id 在 `AKPK` 头块里另有一份：20 字节记录 `[1][id][1][size][offset]`，
+`offset` 指向 `RIFF` 头，`size` 含 8 字节头。按这类记录取 id 才是真实的媒体 id，
+只有目录里也缺这条记录时才退回序号（`0`、`1`…）。
+第一条记录前面还多一个计数字段，所以定位记录不能假设固定表头，只能拿 `RIFF` 偏移去反查。
+
 还有一种混合：`AKPK + BKHD + DIDX + DATA + HIRC + 一个大 RIFF`
 （比如 `sound/Windows/f/fx_ui.pck`，DIDX 225 条，最后跟一个 31 MB 的 BGM）。
 通用循环也能正确处理。
@@ -150,17 +155,72 @@ vgmstream-cli.exe -i -o out.wav in.wem
 
 ## 5. 命名
 
-拆出来的 wem 用 `wem id` 命名（`DIDX` 里的第一个字段），因为那是 Wwise 内部 id，
-后续能不能映射到具体音效名，取决于 `HIRC` 和游戏配置表。
-
-本项目导出为：
+拆出来的 wem 用 Wwise 事件名命名，取不到名字时退回媒体 id：
 
 ```
-<output>/sound/Windows/<子目录>/<pck 名>/<wemId>.wem
-<output>/sound/Windows/<子目录>/<pck 名>/<wemId>.wav
+<output>/sound/Windows/<子目录>/<pck 名>/Play_dx_100011202_2.wem
+<output>/sound/Windows/<子目录>/<pck 名>/46783986.wem        ← 该包没有对应事件名
 ```
 
 `<子目录>` 是 `f`（音效）/ `d`（语音）/ `m`（BGM）/ `movie`（动画配音）。
+
+有些输出文件带 `_2`、`_3` 后缀。这不是重名，而是两个不同的媒体 id 被同一个事件名引用，
+比如 `Play_mx_M14_fast` 有两个波形；冲突时按出现顺序加序号，保证同一目录里不重名。
+
+### 5.1 名字藏在哪
+
+三张表拼起来才能得到名字：
+
+| 数据 | 位置 | 作用 |
+|---|---|---|
+| 媒体 id | `DIDX` 每条前 4 字节；`RIFF` 直排包在 `AKPK` 头块的媒体目录里 | 波形编号 |
+| 对象 id | `HIRC` 每个对象的头部 | bank 内部的对象编号 |
+| 事件名 | `sound/WwiseIdMapping.bytes` | 21780 条 `[id, 长度, 名字]` |
+
+`WwiseIdMapping.bytes` 是加密的：开头 32 字节是 AES 密钥，接着 16 字节是 IV，剩下的是
+AES-256-CBC（PKCS7）密文。解开后是 `u32 条数` + 连续记录 `u32 id, u32 名字长度, utf8 名字`。
+
+**id 是名字的小写 FNV-1（32 位）**，不是随机数：
+
+```
+hash = 2166136261
+for byte in lowercase(name) as utf8:
+    hash = (hash * 16777619) & 0xFFFFFFFF
+    hash ^= byte
+```
+
+21780 条全部对得上，所以这张表可以自校验——解出来的名字算一遍哈希，和存着的 id 比。
+
+### 5.2 从波形走到事件名
+
+`HIRC` 里的对象是 `Event → Action → Sound` 三级引用，Sound 对象里存着媒体 id：
+
+```
+CAkEvent  id = FNV-1(事件名)     body: 动作数量 + 动作 id 列表
+CAkAction id                    body: 类型 Play、目标对象 id
+CAkSound  id                    body: 插件、流类型、媒体 id
+```
+
+所以反推链条是：
+
+```
+媒体 id ← CakSound ← CAkAction ← CAkEvent → 查表 → 事件名
+```
+
+实现上没有按字段表解析引用，而是把每个对象 body 里所有 4 字节窗口拿去和本 bank 的对象 id 集合比对。
+402 个对象的 bank 也只有几十 KB，代价可以忽略；误连一条边最多是少一个名字，不会写到错误的数据。
+
+### 5.3 实测覆盖率
+
+抽 500 个包（3154 个波形）：
+
+| 结果 | 数量 |
+|---|---|
+| 有事件名 | 3149 |
+| 只有数字 id | 5 |
+
+缺失的原因是游戏自己没写进表里，比如 `mx_M57.pck` 的 bank 里只有事件 `0x6c3b55a5`，
+而 `sound/WwiseIdMapping.bytes` 里连 `M57` 这个名字都没有（最接近的是 `Play_mx_M56`）。
 
 ---
 

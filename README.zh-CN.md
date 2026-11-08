@@ -86,7 +86,7 @@ AssetRipper.IO.Files.Exceptions.DecompressionFailedException:
 | 类型 | 数量 | 体积 | 怎么处理 |
 |---|---|---|---|
 | UnityFS 包 | 36 673 | 20.5 GiB | XOR 还原 → `.ab` |
-| AKPK（Wwise `.pck`） | 3 660 | 2.92 GiB | 拆包 → `.wem` → `vgmstream` → `.wav` |
+| AKPK（Wwise `.pck`） | 3 660 | 2.92 GiB | 拆包 → `.wem`（按 Wwise 事件名） → `vgmstream` → `.wav` |
 | CRID（CRI `.usm`） | 346 | 2.80 GiB | 拆流 → `ffmpeg` → `.mp4` |
 | PNG / OTF / 其它 | 23 | 54 MiB | 本来就是明文 |
 

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text;
 using SzbAssetDecryption.Core.IO;
 
@@ -24,6 +25,9 @@ public sealed class WemEntry
 /// <summary>A raw chunk header found while walking the container.</summary>
 public sealed record AkpkChunk(string Tag, long Offset, uint Size);
 
+/// <summary>One record of the <c>AKPK</c> header's media directory.</summary>
+public sealed record AkpkMedia(uint Id, long Offset, long Size);
+
 /// <summary>
 /// Reader for Wwise <c>AKPK</c> packages.
 ///
@@ -46,6 +50,15 @@ public sealed class AkpkPackage
     public List<WemEntry> Entries { get; } = new();
     public long FileSize { get; private set; }
     public string Path { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Media ids from the <c>AKPK</c> header. Populated for packages whose waves are stored as
+    /// whole <c>RIFF</c> chunks (no <c>DIDX</c>); without it those entries only have a counter.
+    /// </summary>
+    public List<AkpkMedia> MediaDirectory { get; } = new();
+
+    /// <summary>Raw <c>HIRC</c> payload, used to map media ids to event names.</summary>
+    public byte[]? Hirc { get; private set; }
 
     public static AkpkPackage Open(string path)
     {
@@ -90,9 +103,23 @@ public sealed class AkpkPackage
                     dataPayload = payload;
                     dataSize = size;
                     break;
+                case "HIRC" when pkg.Hirc is null && size <= 32 * 1024 * 1024:
+                    pkg.Hirc = new byte[size];
+                    fs.Position = payload;
+                    fs.ReadExactly(pkg.Hirc);
+                    break;
             }
 
             pos = payload + size;
+        }
+
+        // ---- media directory carried by the AKPK header ----
+        if (pkg.Chunks.Count > 0 && pkg.Chunks[0].Tag == "AKPK" && pkg.Chunks[0].Size > 0)
+        {
+            var head = new byte[pkg.Chunks[0].Size];
+            fs.Position = pkg.Chunks[0].Offset + 8;
+            fs.ReadExactly(head);
+            pkg.ReadMediaDirectory(head);
         }
 
         // ---- entries backed by an index table ----
@@ -125,19 +152,52 @@ public sealed class AkpkPackage
         }
 
         // ---- entries that are whole RIFF files ----
+        var idByOffset = new Dictionary<long, uint>();
+        foreach (var m in pkg.MediaDirectory)
+            idByOffset.TryAdd(m.Offset, m.Id);
+
         uint seq = 0;
         foreach (var c in pkg.Chunks.Where(c => c.Tag == "RIFF"))
         {
+            bool named = idByOffset.TryGetValue(c.Offset, out uint id);
             pkg.Entries.Add(new WemEntry
             {
-                Id = seq++,
+                Id = named ? id : seq++,
                 Offset = c.Offset,
                 Size = c.Size + 8L,
-                Origin = "riff",
+                Origin = named ? "riff+akpk" : "riff",
             });
         }
 
         return pkg;
+    }
+
+    /// <summary>
+    /// The AKPK header carries a media directory: 20-byte records
+    /// <c>[1][id][1][size][offset]</c>, where <c>offset</c> points at a <c>RIFF</c> chunk and
+    /// <paramref name="size"/> counts its 8-byte header too. The first record is preceded by a
+    /// count word, so records are located by searching for each chunk's offset rather than by
+    /// assuming a fixed table start.
+    /// </summary>
+    private void ReadMediaDirectory(ReadOnlySpan<byte> head)
+    {
+        foreach (var chunk in Chunks)
+        {
+            if (chunk.Tag != "RIFF") continue;
+
+            uint total = chunk.Size + 8u;
+            uint offset = (uint)chunk.Offset;
+
+            for (int i = 12; i + 4 <= head.Length; i++)
+            {
+                if (BinaryPrimitives.ReadUInt32LittleEndian(head[i..]) != offset) continue;
+                if (BinaryPrimitives.ReadUInt32LittleEndian(head[(i - 4)..]) != total) continue;
+
+                uint id = BinaryPrimitives.ReadUInt32LittleEndian(head[(i - 12)..]);
+                if (id != 0) MediaDirectory.Add(new AkpkMedia(id, chunk.Offset, total));
+                break;
+            }
+        }
     }
 
     /// <summary>Copy one waveform's bytes out of the container.</summary>

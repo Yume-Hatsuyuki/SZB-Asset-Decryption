@@ -209,7 +209,7 @@ The directory holds 40 702 files in four groups:
 | Kind | Count | Size | Handling |
 |---|---|---|---|
 | UnityFS bundle | 36 673 | 20.5 GiB | XOR restore → `.ab` |
-| AKPK (Wwise `pck`) | 3 660 | 2.92 GiB | unpack → `.wem` → `vgmstream` → `.wav` |
+| AKPK (Wwise `pck`) | 3 660 | 2.92 GiB | unpack → `.wem` (named after the Wwise event) → `vgmstream` → `.wav` |
 | CRID (CRI `usm`) | 346 | 2.80 GiB | demux → `ffmpeg` → `.mp4` |
 | PNG / OTF / other | 23 | 54 MiB | already plain files |
 

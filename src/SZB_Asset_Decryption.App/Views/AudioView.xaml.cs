@@ -109,6 +109,7 @@ public partial class AudioView : UserControl
             Stats.Clear();
             Stats.Add(new StatItem("音频包", result.Packages.ToString("N0")));
             Stats.Add(new StatItem("拆出 wem", result.Wems.ToString("N0")));
+            Stats.Add(new StatItem("按音效名", result.Named.ToString("N0")));
             Stats.Add(new StatItem("转成 wav", result.Wavs.ToString("N0")));
             Stats.Add(new StatItem("失败", result.Failures.ToString("N0")));
             Stats.Add(new StatItem("耗时", Fmt.Duration(result.Elapsed)));

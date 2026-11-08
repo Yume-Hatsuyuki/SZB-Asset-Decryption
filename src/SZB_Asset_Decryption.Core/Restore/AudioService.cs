@@ -41,6 +41,10 @@ public sealed class AudioResult
     public int Wems { get; set; }
     public int Wavs { get; set; }
     public int Failures { get; set; }
+
+    /// <summary>Waves written under their Wwise event name instead of a numeric id.</summary>
+    public int Named { get; set; }
+
     public TimeSpan Elapsed { get; set; }
     public List<(string File, string Error)> Errors { get; } = new();
 }
@@ -92,13 +96,15 @@ public sealed class AudioService
         var result = new AudioResult { Packages = packages.Count };
         var errors = new ConcurrentBag<(string, string)>();
 
-        int done = 0, wems = 0, wavs = 0, fails = 0;
+        int done = 0, wems = 0, wavs = 0, fails = 0, named = 0;
 
         var po = new ParallelOptions
         {
             MaxDegreeOfParallelism = _opt.Parallelism,
             CancellationToken = _opt.Cancellation,
         };
+
+        WwiseIdMap? idMap = LoadIdMap();
 
         try
         {
@@ -125,14 +131,18 @@ public sealed class AudioService
                     return;
                 }
 
+                IReadOnlyDictionary<uint, string> mediaNames = ResolveNames(pkg, idMap);
+                var usedStems = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
                 using var source = File.OpenRead(path);
-                int localWems = 0, localWavs = 0;
+                int localWems = 0, localWavs = 0, localNamed = 0;
 
                 foreach (var e in pkg.Entries)
                 {
                     if (_opt.Cancellation.IsCancellationRequested) break;
 
-                    string stem = e.Id.ToString();
+                    string stem = UniqueStem(usedStems, e.Id, mediaNames);
+                    if (mediaNames.ContainsKey(e.Id)) localNamed++;
                     string wemPath = Path.Combine(outDir, stem + ".wem");
 
                     try
@@ -168,6 +178,7 @@ public sealed class AudioService
 
                 Interlocked.Add(ref wems, localWems);
                 Interlocked.Add(ref wavs, localWavs);
+                Interlocked.Add(ref named, localNamed);
                 int d = Interlocked.Increment(ref done);
 
                 progress?.Report(new AudioProgress
@@ -186,9 +197,63 @@ public sealed class AudioService
         result.Wems = wems;
         result.Wavs = wavs;
         result.Failures = fails;
+        result.Named = named;
         result.Errors.AddRange(errors.Take(500));
         result.Elapsed = sw.Elapsed;
         return result;
+    }
+
+    /// <summary>
+    /// Load <c>sound/WwiseIdMapping.bytes</c> through the manifest. Returns null when the file
+    /// is absent or does not decrypt, in which case waves keep their numeric media id.
+    /// </summary>
+    private WwiseIdMap? LoadIdMap()
+    {
+        var entry = _opt.Manifest.All.FirstOrDefault(e =>
+            e.Name.EndsWith("WwiseIdMapping.bytes", StringComparison.OrdinalIgnoreCase));
+        if (entry is null || entry.Hash.Length < 2) return null;
+
+        string path = Path.Combine(_opt.DatRoot, entry.Hash[..2], entry.Hash);
+        return WwiseIdMap.TryLoad(path);
+    }
+
+    private static IReadOnlyDictionary<uint, string> ResolveNames(AkpkPackage pkg, WwiseIdMap? idMap)
+    {
+        if (idMap is null || pkg.Hirc is null)
+            return s_emptyNames;
+
+        var objects = HircGraph.TryParse(pkg.Hirc);
+        return objects is null ? s_emptyNames : HircGraph.ResolveMediaNames(objects, idMap);
+    }
+
+    private static readonly IReadOnlyDictionary<uint, string> s_emptyNames =
+        new Dictionary<uint, string>();
+
+    /// <summary>
+    /// Prefer the Wwise event name, fall back to the numeric media id. Names repeat across a
+    /// package when one wave is shared by several events, so collisions get a numeric suffix.
+    /// </summary>
+    private static string UniqueStem(HashSet<string> used, uint id,
+                                     IReadOnlyDictionary<uint, string> names)
+    {
+        string stem = names.TryGetValue(id, out var n) ? Sanitise(n) : id.ToString();
+
+        if (used.Add(stem)) return stem;
+
+        for (int i = 2; ; i++)
+        {
+            string candidate = $"{stem}_{i}";
+            if (used.Add(candidate)) return candidate;
+        }
+    }
+
+    private static string Sanitise(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = name.ToCharArray();
+        for (int i = 0; i < chars.Length; i++)
+            if (Array.IndexOf(invalid, chars[i]) >= 0) chars[i] = '_';
+        return new string(chars);
     }
 
     private static string FirstLine(string s)
