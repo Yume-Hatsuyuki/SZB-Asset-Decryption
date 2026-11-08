@@ -191,6 +191,8 @@ for byte in lowercase(name) as utf8:
 
 21780 条全部对得上，所以这张表可以自校验——解出来的名字算一遍哈希，和存着的 id 比。
 
+这条链路不是本项目推出来的，最初的公开解法见 [5.4 出处](#54-出处)。
+
 ### 5.2 从波形走到事件名
 
 `HIRC` 里的对象是 `Event → Action → Sound` 三级引用，Sound 对象里存着媒体 id：
@@ -221,6 +223,39 @@ CAkSound  id                    body: 插件、流类型、媒体 id
 
 缺失的原因是游戏自己没写进表里，比如 `mx_M57.pck` 的 bank 里只有事件 `0x6c3b55a5`，
 而 `sound/WwiseIdMapping.bytes` 里连 `M57` 这个名字都没有（最接近的是 `Play_mx_M56`）。
+
+### 5.4 出处
+
+这套解法的公开来源是 live2dhub 论坛「求助 影之诗Beyond如何解包」主题的 52 楼，
+作者 Airtnp，2025-07-06，小节标题「更新8：研究了一下0人在意的wem id到音效名的音频对应关系」。
+
+原文（只改动了排版，措辞未动）：
+
+> 更新8：研究了一下0人在意的wem id到音效名的音频对应关系
+>
+> - 音频从 `Play_{XXX}` 到 WWise ID 通过固定的 FNV-1A hash。szb 还很贴心的帮你把对应表存下来了，头 0x20 为 key 之后 0x10 是 iv，RJ256 解密
+> - pck 文件都是 1 个 bnk + N 个 wem，WWise 版本 2023.1，至少需要支持 `AK_SOUNDBANK_VERISON >= 150` 的工具来替换
+> - bnk 里面可以从 `WEM → CAkSound → CAkActionPlay → CAkEvent → FNV-1a(Play_{XXX})` 一级一级对应下去，折叠后可以得到 wem 到音效名的对应
+>
+> 脚本如下，需自行 clone wwiser 仓库
+
+原帖地址：<https://live2dhub.com/t/topic/4749/52>
+
+帖子附了一整段 Python 脚本，函数是 `decrypt_wwise_bytes`（切掉 0x20 密钥 + 0x10 IV 后
+AES-CBC 解密）、`read_wwise_table`、`fnv1a_32`、`extract_banks`（按 `BKHD` 扫描切出 bank）、
+`get_wem_mapping`（调 wwiser 解析 bank 拿三级引用），最后由 `rebuild_wem_name_mapping` 串起来。
+
+本项目按其思路重写为 C#，没有调用脚本，也没有引入 wwiser；逐条核对后有三处要说明：
+
+| 项 | 帖子 | 实测 |
+|---|---|---|
+| 哈希 | 正文写 FNV-1A，函数名也叫 `fnv1a_32`，但函数体是 `h = (h * 0x01000193) & 0xFFFFFFFF; h ^= b`，即 FNV-1 | 按 FNV-1 计算，21780 条全部吻合；换成 FNV-1A（先异或再乘）0 条吻合。实现取 FNV-1 |
+| bank 版本 | 2023.1，工具需支持 `>= 150` | `BKHD` 里读出 `0x9A` = 154，与帖子一致 |
+| 媒体 id 的位置 | 依赖 wwiser 从 `HIRC` 的 Sound 对象里取 | `DIDX` 直排的包照上面做；`AKPK` 头块里另有一份媒体目录，每条 20 字节，`offset` 处就是 `RIFF`，媒体 id 在 `offset` 前 12 字节（前 8 字节是恒为 1 的标志） |
+
+另外，帖子的 `get_wem_mapping` 用 `wem_to_sound / sound_to_action / action_to_event` 三张字典
+逐级查表，缺一级就抛 `KeyError`；本项目的做法是拿对象 body 里的 4 字节窗口去比对本 bank 的
+对象 id 集合，缺边时只是取不到名字，不会中断整包处理（见 5.2）。
 
 ---
 
