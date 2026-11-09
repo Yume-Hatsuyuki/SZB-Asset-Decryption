@@ -3,6 +3,8 @@
 Reverse-engineering notes and a restoration tool for the **encrypted Unity AssetBundles** shipped
 with *Shadowverse: Worlds Beyond* (SZB / SVWB).
 
+> 中文版: [`README.zh-CN.md`](README.zh-CN.md)
+
 The game modifies every AssetBundle with a streaming XOR cipher applied **after** the first 256 bytes.
 Stock tools such as AssetRipper or AssetStudio therefore read the bundle header fine, but fail on
 every data block:
